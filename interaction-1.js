@@ -52,9 +52,13 @@ engine.createDSP(audioContext, 1024)
 //==========================================================================================
 
 function accelerationChange(accx, accy, accz) {
-    // playAudio()
+    // Not used for this interaction
 }
 
+// Mapping 1: Tilt → Engine
+// Gesture: Tilt the device along the X-axis (Roll angle)
+// Sound: Engine (engine.wasm)
+// Motivation: The device tilt angle (rotationX) controls the engine speed
 function rotationChange(rotx, roty, rotz) {
     if (rotx === null || !dspNode) {
         return;
@@ -67,26 +71,24 @@ function rotationChange(rotx, roty, rotz) {
     console.log("x:", clampedRotX, "gear:", gear + 1);
 }
 
-// function mousePressed() {
-//     playAudio()
-//     // Use this for debugging from the desktop!
-// }
-
-// 根据 xAngle（0-180）设置引擎速度
-
+function mousePressed() {
+    // playAudio()
+    // Use this for debugging from the desktop!
+}
 
 function deviceMoved() {
-    rotationChange(rotationX, rotationY, rotationZ);
+    movetimer = millis();
+    statusLabels[2].style("color", "pink");
 }
 
 function deviceTurned() {
     threshVals[1] = turnAxis;
 }
-// function deviceShaken() {
-//     shaketimer = millis();
-//     statusLabels[0].style("color", "pink");
-//     playAudio();
-// }
+
+function deviceShaken() {
+    shaketimer = millis();
+    statusLabels[0].style("color", "pink");
+}
 
 function getMinMaxParam(address) {
     const exampleMinMaxParam = findByAddress(dspNodeParams, address);
