@@ -56,6 +56,15 @@ function accelerationChange(accx, accy, accz) {
 }
 
 function rotationChange(rotx, roty, rotz) {
+    if (rotx === null || !dspNode) {
+        return;
+    }
+    const absRotX = Math.abs(rotx);
+    const clampedRotX = Math.max(0, Math.min(180, absRotX));
+    let gear = Math.floor(clampedRotX / 36);
+    if (gear > 4) gear = 4;
+    dspNode.setParamValue("/engine/maxSpeed", speed[gear]);
+    console.log("x:", clampedRotX, "gear:", gear + 1);
 }
 
 // function mousePressed() {
@@ -64,21 +73,10 @@ function rotationChange(rotx, roty, rotz) {
 // }
 
 // 根据 xAngle（0-180）设置引擎速度
-function updateEngine(xAngle) {
-    if (!dspNode) return;
-
-    xAngle = Math.max(0, Math.min(180, xAngle));
-    let gear = Math.floor(xAngle / 36);
-    if (gear > 4) gear = 4;
-    dspNode.setParamValue("/engine/maxSpeed", speed[gear]);
-    console.log("x:", xAngle, "gear:", gear + 1);
-}
-
 
 
 function deviceMoved() {
-    playAudio();
-    updateEngine(rotationX);
+    rotationChange(rotationX, rotationY, rotationZ);
 }
 
 function deviceTurned() {
