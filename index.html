@@ -25,32 +25,23 @@
         <b>Interaction 1: Tilt → Engine</b>
         <br />
         <br />
-        <b>Gesture:</b> Tilt the device along the X-axis (Roll angle). The engine sound volume is controlled by the tilt angle in 5 discrete levels.
+        <b>Gesture:</b> Tilt the device along the X-axis (Roll angle). The engine sound is triggered when the tilt angle (rotationX) exceeds 90°.
         <br />
         <b>Sound:</b> Engine (synthesized using Faust)
         <br />
         <br />
-        <b>Volume Levels:</b>
+        <b>How it works:</b>
         <br />
-        • RotationX: 0° → 0% volume (silent)
+        • When the device is tilted and rotationX exceeds 90° (in either direction), the engine sound is triggered
         <br />
-        • RotationX: 30-60° → 20% volume
+        • Each trigger produces a short engine sound (100ms)
         <br />
-        • RotationX: 60-90° → 40% volume
-        <br />
-        • RotationX: 90-120° → 60% volume
-        <br />
-        • RotationX: 120-150° → 80% volume
-        <br />
-        • RotationX: 150-180° → 100% volume (maximum)
+        • A cooldown period (200ms) prevents continuous triggering
         <br />
         <br />
         <b>Design Motivation:</b>
         <br />
-        This mapping connects the device's tilt angle (rotationX) with the engine sound volume through a discrete 5-level system. The interaction provides clear, quantized feedback where each tilt range corresponds to a distinct volume level. This creates an intuitive control mechanism similar to a throttle or volume knob with discrete positions.
-        <br />
-        <br />
-        The discrete volume levels make it easy for users to understand and control the engine sound intensity. When the device is held flat (0°), the engine is silent. As the user tilts the device further, the engine volume increases in distinct steps, creating a clear mapping between physical orientation and sound intensity. This design is motivated by the need for precise, predictable control in applications such as vehicle simulators, racing games, or interactive sound installations where users need to understand the relationship between their physical gesture and the resulting sound output.
+        This mapping connects the device's tilt angle (rotationX) with the engine sound through a discrete trigger system. When the user tilts the device beyond 90°, it triggers an engine sound, creating an intuitive mapping between physical orientation and sound output. This design is motivated by the need for clear, predictable feedback in applications such as vehicle simulators, racing games, or interactive sound installations where users need to understand the relationship between their physical gesture and the resulting sound output.
       </p>
     </div>
 
