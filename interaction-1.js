@@ -80,14 +80,20 @@ function rotationChange(rotx, roty, rotz) {
         return;
     }
     
+    // Map rotationX (0-180) to volume (0-Max)
+    // rotationX = 0 → Volume = 0
+    // rotationX = 180 → Volume = Max
     const absRotX = Math.abs(rotx);
-    const currentTime = millis();
+    const volumeParam = "/untitled/volume";
+    const volumeParamObj = findByAddress(dspNodeParams, volumeParam);
     
-    // Check if rotationX exceeds threshold and cooldown has passed
-    if (absRotX > ROTATION_X_THRESHOLD && 
-        (currentTime - lastTriggerTime > TRIGGER_COOLDOWN)) {
-        playAudio();
-        lastTriggerTime = currentTime;
+    if (volumeParamObj) {
+        const [minVolume, maxVolume] = getParamMinMax(volumeParamObj);
+        // Clamp rotationX to 0-180 range
+        const clampedRotX = Math.max(0, Math.min(180, absRotX));
+        // Linear mapping: rotationX 0-180 → volume min-max
+        const volumeValue = minVolume + (clampedRotX / 180) * (maxVolume - minVolume);
+        dspNode.setParamValue(volumeParam, volumeValue);
     }
 }
 
