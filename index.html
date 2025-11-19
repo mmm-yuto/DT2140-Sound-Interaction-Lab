@@ -22,20 +22,35 @@
 
     <div id="info">
       <p>
-        <b>Interaction 1: Shake (Horizontal) → Engine</b>
+        <b>Interaction 1: Tilt → Engine</b>
         <br />
         <br />
-        <b>Gesture:</b> iPhoneを横向きに持って振る (The phone is held horizontally and shaken)
+        <b>Gesture:</b> Tilt the device along the X-axis (Roll angle). The engine sound volume is controlled by the tilt angle in 5 discrete levels.
         <br />
         <b>Sound:</b> Engine (synthesized using Faust)
         <br />
         <br />
+        <b>Volume Levels:</b>
+        <br />
+        • RotationX: 0° → 0% volume (silent)
+        <br />
+        • RotationX: 30-60° → 20% volume
+        <br />
+        • RotationX: 60-90° → 40% volume
+        <br />
+        • RotationX: 90-120° → 60% volume
+        <br />
+        • RotationX: 120-150° → 80% volume
+        <br />
+        • RotationX: 150-180° → 100% volume (maximum)
+        <br />
+        <br />
         <b>Design Motivation:</b>
         <br />
-        This mapping connects the action of shaking the phone while held horizontally with the sound of an engine. The intensity of the shaking motion directly controls the volume and speed of the engine sound - the more vigorously you shake the device, the louder and faster the engine becomes. This creates an intuitive mapping where the physical effort of shaking corresponds to the engine's RPM (revolutions per minute).
+        This mapping connects the device's tilt angle (rotationX) with the engine sound volume through a discrete 5-level system. The interaction provides clear, quantized feedback where each tilt range corresponds to a distinct volume level. This creates an intuitive control mechanism similar to a throttle or volume knob with discrete positions.
         <br />
         <br />
-        This interaction design is motivated by the natural analogy between physical motion and engine performance. Just as an engine's speed increases with more throttle, shaking the device more vigorously increases the engine sound's intensity. The use case scenario could be a racing game, a vehicle simulator, or an interactive sound installation where users can control engine sounds through physical gesture. The horizontal orientation ensures that the gesture feels natural and ergonomic, similar to holding a steering wheel or throttle control.
+        The discrete volume levels make it easy for users to understand and control the engine sound intensity. When the device is held flat (0°), the engine is silent. As the user tilts the device further, the engine volume increases in distinct steps, creating a clear mapping between physical orientation and sound intensity. This design is motivated by the need for precise, predictable control in applications such as vehicle simulators, racing games, or interactive sound installations where users need to understand the relationship between their physical gesture and the resulting sound output.
       </p>
     </div>
 

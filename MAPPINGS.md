@@ -6,33 +6,42 @@ This document describes the three gesture-to-sound mappings implemented for Lab 
 
 | NUMBER | ACTION | SOUND | MOTIVATION |
 | :--- | :--- | :--- | :--- |
-| 1 | The phone is held horizontally and shaken | Engine | The action of shaking the phone while held horizontally is mapped to engine sound, where the intensity of shaking directly controls the volume and speed of the engine. The more vigorously you shake, the louder and faster the engine becomes, creating an intuitive mapping between physical effort and engine RPM. Use case: racing games, vehicle simulators, or interactive sound installations where users control engine sounds through physical gesture. |
+| 1 | Tilt the device along the X-axis (Roll angle) | Engine | The device's tilt angle (rotationX) controls the engine sound volume through a discrete 5-level system. When the device is held flat (0°), the engine is silent. As the user tilts the device further, the engine volume increases in distinct steps (20%, 40%, 60%, 80%, 100%), creating a clear mapping between physical orientation and sound intensity. This design provides precise, predictable control similar to a throttle or volume knob with discrete positions. Use case: vehicle simulators, racing games, or interactive sound installations where users need to understand the relationship between their physical gesture and the resulting sound output. |
 | 2 | The phone is held vertically and shaken | Church Bell | The action of shaking the phone while held vertically mimics the physical motion of ringing a bell by pulling a rope downward. This creates a natural connection between vertical shaking movements and bell ringing, recreating the traditional bell-ringing motion in a digital context. Use case: meditation apps, church bell simulators, or interactive musical instruments. |
 | 3 | The phone is used to make a striking motion (like hitting with a stick) | Marimba | The striking motion of the device (sudden, sharp acceleration changes) is mapped to marimba sounds. Each strike produces a different pitch, creating a percussive interaction that mimics striking marimba bars with mallets. Use case: virtual marimba apps, music education tools, or interactive percussion instruments where users play through natural striking gestures. |
 
 ## Detailed Implementation
 
-### Mapping 1: Shake (Horizontal) → Engine
+### Mapping 1: Tilt → Engine
 
 **Gesture Detection:**
-- Uses p5.js's built-in `deviceShaken()` function combined with orientation detection
-- `rotationChange()` function checks if device is held horizontally (rotationY between -30° to 30° or 150° to -150°)
-- `accelerationChange()` function calculates shake intensity based on acceleration change
-- Only triggers when device is held horizontally AND shaken
+- Uses `rotationChange()` function called every frame from `sketch.js`
+- Detects device tilt angle along X-axis (Roll angle, rotationX)
+- Uses absolute value of rotationX to handle both positive and negative angles
+- Maps rotationX to 5 discrete volume levels:
+  - 0° to 30°: 0% volume (silent)
+  - 30° to 60°: 20% volume
+  - 60° to 90°: 40% volume
+  - 90° to 120°: 60% volume
+  - 120° to 150°: 80% volume
+  - 150° to 180°: 100% volume (maximum)
 
 **Sound Control:**
 - Sound: Engine (engine.wasm)
 - Parameters: `/engine/gate` (gate: 0/1), `/engine/volume` (0.0-1.0), `/engine/maxSpeed` (0.0-1.0)
 - Implementation: 
-  - When horizontal shake is detected, gate is set to 1
-  - Volume and maxSpeed are mapped from shake intensity (0.3-1.0 for volume, 0.1-1.0 for maxSpeed)
-  - Gate is reset to 0 after 100ms
+  - When rotationX is 0° or in 0-30° range, gate is set to 0 (engine off)
+  - When rotationX is in any other valid range, gate is set to 1 (engine on)
+  - Volume is mapped to discrete levels (0.0, 0.2, 0.4, 0.6, 0.8, 1.0)
+  - Engine volume parameter is calculated as: minVolume (0.1) + (volumeLevel * 0.9)
+  - MaxSpeed is also adjusted based on volume level for more realistic engine behavior
 
 **Technical Details:**
 - File: `interaction-1.js`
-- The `deviceShaken()` function checks `window.isDeviceHorizontal` before triggering
-- The `playAudio(shakeIntensity)` function receives shake intensity and maps it to volume/speed
-- Shake intensity is calculated as the Euclidean distance of acceleration change
+- The `rotationChange(rotx, roty, rotz)` function continuously monitors rotationX
+- Uses `Math.abs(rotx)` to handle both positive and negative angles
+- Volume levels are discrete (quantized) rather than continuous
+- The `playAudio(volume)` function receives the volume level (0.0 to 1.0) and maps it to engine parameters
 
 ### Mapping 2: Shake (Vertical) → Church Bell
 

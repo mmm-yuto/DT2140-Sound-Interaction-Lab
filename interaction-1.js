@@ -71,27 +71,54 @@ function accelerationChange(accx, accy, accz) {
     // Not used for this interaction
 }
 
-// Mapping 1: Shake (Horizontal) → Engine
-// Gesture: rotationXが-50°から50°の範囲で音が鳴る
+// Mapping 1: Tilt → Engine
+// Gesture: rotationX angle controls engine volume in 5 discrete levels
 // Sound: Engine (engine.wasm)
-// Motivation: rotationX:0の時に音は鳴らず、-50°や50°に近づくにつれて音量が大きくなる
+// Motivation: The device tilt angle (rotationX) controls the engine volume in 5 distinct levels
+// Volume levels:
+//   RotationX: 0° → 0% volume
+//   RotationX: 30-60° → 20% volume
+//   RotationX: 60-90° → 40% volume
+//   RotationX: 90-120° → 60% volume
+//   RotationX: 120-150° → 80% volume
+//   RotationX: 150-180° → 100% volume
 function rotationChange(rotx, roty, rotz) {
-    // Check if rotationX is in the valid range (-50° to 50°)
-    if (rotx !== null && rotx >= -50 && rotx <= 50) {
-        // Calculate volume based on distance from 0°
-        // When rotx = 0°, volume = 0.0
-        // When rotx = ±50°, volume = 1.0
-        // Use absolute value to get distance from center
-        const absRotX = Math.abs(rotx);
-        // Normalize from 0° to 50° to 0.0 to 1.0
-        const normalizedVolume = absRotX / 50.0;
-        
-        // Play audio with volume based on rotationX
-        playAudio(normalizedVolume);
-    } else {
-        // Outside the range, stop the sound
+    if (rotx === null) {
         playAudio(0.0);
+        return;
     }
+    
+    // Use absolute value to handle both positive and negative angles
+    const absRotX = Math.abs(rotx);
+    
+    // Map rotationX to volume levels (0.0 to 1.0)
+    let volume = 0.0;
+    
+    if (absRotX >= 0 && absRotX < 30) {
+        // 0° to 30°: 0% volume
+        volume = 0.0;
+    } else if (absRotX >= 30 && absRotX < 60) {
+        // 30° to 60°: 20% volume
+        volume = 0.2;
+    } else if (absRotX >= 60 && absRotX < 90) {
+        // 60° to 90°: 40% volume
+        volume = 0.4;
+    } else if (absRotX >= 90 && absRotX < 120) {
+        // 90° to 120°: 60% volume
+        volume = 0.6;
+    } else if (absRotX >= 120 && absRotX < 150) {
+        // 120° to 150°: 80% volume
+        volume = 0.8;
+    } else if (absRotX >= 150 && absRotX <= 180) {
+        // 150° to 180°: 100% volume
+        volume = 1.0;
+    } else {
+        // Outside range, no sound
+        volume = 0.0;
+    }
+    
+    // Play audio with the calculated volume level
+    playAudio(volume);
 }
 
 function mousePressed() {
@@ -131,9 +158,9 @@ function getMinMaxParam(address) {
 //
 //==========================================================================================
 
-// Play engine sound with volume controlled by rotationX
+// Play engine sound with volume controlled by rotationX in 5 discrete levels
 // Uses /engine/gate parameter and /engine/volume based on rotationX angle
-// Volume: 0.0 (rotationX = 0°) to 1.0 (rotationX = ±50°)
+// Volume levels: 0% (0°), 20% (30-60°), 40% (60-90°), 60% (90-120°), 80% (120-150°), 100% (150-180°)
 function playAudio(volume = 0.0) {
     if (!dspNode) {
         return;
@@ -154,13 +181,13 @@ function playAudio(volume = 0.0) {
     // Set gate to 1 to start the engine
     dspNode.setParamValue("/engine/gate", 1);
     
-    // Set volume based on rotationX (0.0 to 1.0)
+    // Map volume level (0.0 to 1.0) to engine volume parameter
     // Minimum volume threshold to ensure engine is audible
     const minVolume = 0.1;
     const engineVolume = minVolume + (clampedVolume * 0.9); // 0.1 to 1.0
     dspNode.setParamValue("/engine/volume", engineVolume);
     
-    // Optionally adjust maxSpeed based on volume as well
+    // Adjust maxSpeed based on volume level
     const maxSpeed = 0.1 + (clampedVolume * 0.9);
     dspNode.setParamValue("/engine/maxSpeed", maxSpeed);
 }
