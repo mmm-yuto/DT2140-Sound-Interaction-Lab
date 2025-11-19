@@ -174,7 +174,7 @@ function getMinMaxParam(address) {
 // Play engine sound with volume controlled by rotationX in 5 discrete levels
 // Uses /engine/gate parameter and /engine/volume based on rotationX angle
 // Volume levels: 0% (0°), 20% (30-60°), 40% (60-90°), 60% (90-120°), 80% (120-150°), 100% (150-180°)
-// Only starts playback if engine is not already playing
+// Engine is always ON, only volume changes
 function playAudio(volume = 0.0) {
     // Debug: Check if dspNode is loaded
     if (!dspNode) {
@@ -196,29 +196,18 @@ function playAudio(volume = 0.0) {
     // Clamp volume to valid range (0.0 to 1.0)
     const clampedVolume = Math.max(0.0, Math.min(1.0, volume));
     
-    // If volume is 0, turn off the gate and stop playback
-    if (clampedVolume === 0.0) {
-        if (window.isEnginePlaying) {
-            dspNode.setParamValue("/engine/gate", 0);
-            window.isEnginePlaying = false;
-            // Debug: Log when gate is turned off
-            console.log('Engine gate turned OFF (volume = 0)');
-        }
-        return;
-    }
-    
-    // If engine is not playing, start playback
+    // Start engine once (gate is always ON after first start)
     if (!window.isEnginePlaying) {
         dspNode.setParamValue("/engine/gate", 1);
         window.isEnginePlaying = true;
-        console.log('Engine started playing');
+        console.log('Engine started playing (always ON)');
     }
     
-    // Update volume and speed parameters (always update these, even if already playing)
+    // Always keep gate ON, only change volume
     // Map volume level (0.0 to 1.0) to engine volume parameter
-    // Minimum volume threshold to ensure engine is audible
-    const minVolume = 0.1;
-    const engineVolume = minVolume + (clampedVolume * 0.9); // 0.1 to 1.0
+    // When volume is 0, set engine volume to minimum (but keep gate ON)
+    const minVolume = 0.0; // Allow volume to go to 0
+    const engineVolume = minVolume + (clampedVolume * 1.0); // 0.0 to 1.0
     dspNode.setParamValue("/engine/volume", engineVolume);
     
     // Adjust maxSpeed based on volume level
