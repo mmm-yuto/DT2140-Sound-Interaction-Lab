@@ -447,19 +447,47 @@ class FaustWasm2ScriptProcessor {
             // Try to load from wasm/ folder first, then fallback to root
             let wasmPath = "wasm/" + this.name + ".wasm";
             let dspFile;
+            let loaded = false;
             
+            // Try wasm/ folder first
+            console.log("Trying to load WASM from: " + wasmPath);
             try {
                 dspFile = await fetch(wasmPath);
-                if (!dspFile.ok) {
-                    throw new Error("Not found in wasm/ folder");
+                console.log("Fetch result for " + wasmPath + ": status=" + dspFile.status + ", ok=" + dspFile.ok);
+                if (dspFile.ok) {
+                    loaded = true;
+                    console.log("Successfully found WASM file at: " + wasmPath);
+                } else {
+                    console.log("WASM file not found at: " + wasmPath + " (status: " + dspFile.status + ")");
                 }
             } catch (e) {
-                // If not found in wasm/ folder, try root directory
+                console.log("Error fetching from wasm/ folder: " + e.message);
+                // Continue to try root directory
+            }
+            
+            // If not found in wasm/ folder, try root directory
+            if (!loaded) {
                 wasmPath = this.name + ".wasm";
-                dspFile = await fetch(wasmPath);
-                if (!dspFile.ok) {
-                    throw new Error("WASM file not found in both wasm/ folder and root: " + this.name + ".wasm");
+                console.log("Trying to load WASM from root: " + wasmPath);
+                try {
+                    dspFile = await fetch(wasmPath);
+                    console.log("Fetch result for " + wasmPath + ": status=" + dspFile.status + ", ok=" + dspFile.ok);
+                    if (dspFile.ok) {
+                        loaded = true;
+                        console.log("Successfully found WASM file at: " + wasmPath);
+                    } else {
+                        console.log("WASM file not found at: " + wasmPath + " (status: " + dspFile.status + ")");
+                    }
+                } catch (e) {
+                    console.log("Error fetching from root: " + e.message);
+                    // File not found
                 }
+            }
+            
+            if (!loaded || !dspFile.ok) {
+                const errorMsg = "WASM file not found: tried wasm/" + this.name + ".wasm and " + this.name + ".wasm. Please ensure the file exists in the wasm/ folder.";
+                console.error(errorMsg);
+                throw new Error(errorMsg);
             }
             
             const dspBuffer = await dspFile.arrayBuffer();
