@@ -13,7 +13,7 @@ let jsonParams = null;
 
 // Change here to ("marimbaMIDI") depending on your wasm file name
 // NOTE: You need to compile marimbaMIDI.dsp using Faust IDE to generate marimbaMIDI.wasm
-const dspName = "marimbaMIDI";
+const dspName = "churchBell";
 const instance = new FaustWasm2ScriptProcessor(dspName);
 
 // output to window or npm package module
