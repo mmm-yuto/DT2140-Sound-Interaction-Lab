@@ -36,17 +36,17 @@ marimbaMIDI.createDSP(audioContext, 1024)
         const jsonString = dspNode.getJSON();
         jsonParams = JSON.parse(jsonString)["ui"][0]["items"];
         dspNodeParams = jsonParams
-        // Check marimbaMIDI parameters min/max values for safety
-        // MarimbaMIDI parameters: gate, note, velocity, etc.
-        const marimbaGateParam = findByAddress(dspNodeParams, "/marimbaMIDI/gate");
-        const marimbaNoteParam = findByAddress(dspNodeParams, "/marimbaMIDI/note");
+        // Check marimba parameters min/max values for safety
+        // Marimba parameters: gate, midi/freq, midi/gain, etc.
+        const marimbaGateParam = findByAddress(dspNodeParams, "/marimba/gate");
+        const marimbaFreqParam = findByAddress(dspNodeParams, "/marimba/midi/freq");
         if (marimbaGateParam) {
             const [minValue, maxValue] = getParamMinMax(marimbaGateParam);
-            console.log('MarimbaMIDI/gate - Min value:', minValue, 'Max value:', maxValue);
+            console.log('marimba/gate - Min value:', minValue, 'Max value:', maxValue);
         }
-        if (marimbaNoteParam) {
-            const [minValue, maxValue] = getParamMinMax(marimbaNoteParam);
-            console.log('MarimbaMIDI/note - Min value:', minValue, 'Max value:', maxValue);
+        if (marimbaFreqParam) {
+            const [minValue, maxValue] = getParamMinMax(marimbaFreqParam);
+            console.log('marimba/midi/freq - Min value:', minValue, 'Max value:', maxValue);
         }
         // If parameters don't exist, check for other common parameters
         console.log('Available parameters:', dspNode.getParams());
@@ -82,7 +82,7 @@ function rotationChange(rotx, roty, rotz) {
 }
 
 function mousePressed() {
-    // playAudio()
+    playAudio();
     // Use this for debugging from the desktop!
 }
 
@@ -123,8 +123,8 @@ function getMinMaxParam(address) {
 //==========================================================================================
 
 // Play marimba sound when device is shaken
-// Uses /marimbaMIDI/gate parameter and optionally /marimbaMIDI/note for different pitches
-// Note: Parameter names may vary, check console for available parameters
+// Uses /marimba/gate parameter and /marimba/midi/freq for different pitches
+// Note: Actual parameter names: /marimba/gate, /marimba/midi/freq, /marimba/midi/gain, etc.
 function playAudio() {
     if (!dspNode) {
         return;
@@ -132,18 +132,19 @@ function playAudio() {
     if (audioContext.state === 'suspended') {
         return;
     }
-    // Try common parameter names for marimba MIDI
-    // The actual parameter names may be different, check console output
-    const gateParam = "/marimbaMIDI/gate";
-    const noteParam = "/marimbaMIDI/note";
+    // Use actual parameter names from marimbaMIDI.wasm
+    const gateParam = "/marimba/gate";
+    const freqParam = "/marimba/midi/freq";
+    
+    // Set frequency (MIDI note to frequency conversion)
+    // MIDI note 60 (C4) = 261.63 Hz, MIDI note 72 (C5) = 523.25 Hz
+    // Random note between C4 and C5
+    const midiNote = 60 + Math.floor(Math.random() * 12); // C4 to C5 range
+    const frequency = 440 * Math.pow(2, (midiNote - 69) / 12); // Convert MIDI note to frequency
+    dspNode.setParamValue(freqParam, frequency);
     
     // Trigger marimba sound with gate
     dspNode.setParamValue(gateParam, 1);
-    
-    // Optionally set a note (MIDI note number, e.g., 60 = C4)
-    // You can randomize or vary the note for different pitches
-    const midiNote = 60 + Math.floor(Math.random() * 12); // C4 to C5 range
-    dspNode.setParamValue(noteParam, midiNote);
     
     // Keep gate on for a short duration
     setTimeout(() => { 

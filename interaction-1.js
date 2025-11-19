@@ -11,8 +11,9 @@ let dspNode = null;
 let dspNodeParams = null;
 let jsonParams = null;
 
-// Change here to ("tuono") depending on your wasm file name
-const dspName = "engine";
+// Change here to ("engine") depending on your wasm file name
+// NOTE: You need to compile engine.dsp using Faust IDE to generate engine.wasm
+const dspName = "engine1";
 const instance = new FaustWasm2ScriptProcessor(dspName);
 
 // output to window or npm package module
@@ -24,18 +25,27 @@ if (typeof module === "undefined") {
   module.exports = exp;
 }
 
-// The name should be the same as the WASM file, so change tuono with brass if you use brass.wasm
-engine.createDSP(audioContext, 1024).then((node) => {
+// The name should be the same as the WASM file, so change engine with your wasm file name
+// NOTE: If engine.wasm doesn't exist, this will fail. You need to compile engine.dsp using Faust IDE.
+engine1.createDSP(audioContext, 1024).then((node) => {
   dspNode = node;
   dspNode.connect(audioContext.destination);
   console.log("params: ", dspNode.getParams());
   const jsonString = dspNode.getJSON();
   jsonParams = JSON.parse(jsonString)["ui"][0]["items"];
   dspNodeParams = jsonParams;
-  // const exampleMinMaxParam = findByAddress(dspNodeParams, "/thunder/rumble");
-  // // ALWAYS PAY ATTENTION TO MIN AND MAX, ELSE YOU MAY GET REALLY HIGH VOLUMES FROM YOUR SPEAKERS
-  // const [exampleMinValue, exampleMaxValue] = getParamMinMax(exampleMinMaxParam);
-  // console.log('Min value:', exampleMinValue, 'Max value:', exampleMaxValue);
+  // Check engine1 parameters min/max values for safety
+  const engineGateParam = findByAddress(dspNodeParams, "/untitled/gate");
+  const engineMaxSpeedParam = findByAddress(dspNodeParams, "/untitled/maxSpeed");
+  if (engineGateParam) {
+    const [minValue, maxValue] = getParamMinMax(engineGateParam);
+    console.log('untitled/gate - Min value:', minValue, 'Max value:', maxValue);
+  }
+  if (engineMaxSpeedParam) {
+    const [minValue, maxValue] = getParamMinMax(engineMaxSpeedParam);
+    console.log('untitled/maxSpeed - Min value:', minValue, 'Max value:', maxValue);
+  }
+  console.log('Available parameters:', dspNode.getParams());
 });
 
 //==========================================================================================
@@ -82,7 +92,7 @@ function rotationChange(rotx, roty, rotz) {
 }
 
 function mousePressed() {
-//   playAudio();
+  playAudio();
   // Use this for debugging from the desktop!
 }
 
@@ -124,8 +134,8 @@ function getMinMaxParam(address) {
 //==========================================================================================
 
 // Play engine sound when rotationX exceeds 90°
-// Uses /engine/gate parameter as a gate (0/1)
-// Note: Parameter name may vary, check console for available parameters
+// Uses /untitled/gate parameter as a gate (0/1)
+// Note: Actual parameter names: /untitled/gate, /untitled/maxSpeed, /untitled/volume, etc.
 function playAudio() {
   if (!dspNode) {
     return;
@@ -133,9 +143,8 @@ function playAudio() {
   if (audioContext.state === "suspended") {
     return;
   }
-  // Try common parameter names for engine
-  // The actual parameter name may be different, check console output
-  const gateParam = "/engine/gate";
+  // Use actual parameter names from engine1.wasm
+  const gateParam = "/untitled/gate";
   dspNode.setParamValue(gateParam, 1);
   setTimeout(() => { 
     dspNode.setParamValue(gateParam, 0);
