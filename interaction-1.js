@@ -67,44 +67,31 @@ engine.createDSP(audioContext, 1024)
 //
 //==========================================================================================
 
-// Store previous acceleration values to calculate change
-let prevAccX = 0, prevAccY = 0, prevAccZ = 0;
-let lastShakeTime = 0;
-const SHAKE_COOLDOWN = 100; // milliseconds
-
 function accelerationChange(accx, accy, accz) {
-    // Calculate acceleration change (shake intensity)
-    const accChange = Math.sqrt(
-        Math.pow(accx - prevAccX, 2) + 
-        Math.pow(accy - prevAccY, 2) + 
-        Math.pow(accz - prevAccZ, 2)
-    );
-    
-    // Update previous values
-    prevAccX = accx;
-    prevAccY = accy;
-    prevAccZ = accz;
-    
-    // Store shake intensity for use in deviceShaken()
-    window.lastShakeIntensity = accChange;
+    // Not used for this interaction
 }
 
-// Mapping 1: Shake (horizontal) → Engine
-// Gesture: iPhoneを横向きに持って振る
+// Mapping 1: Shake (Horizontal) → Engine
+// Gesture: rotationXが-50°から50°の範囲で音が鳴る
 // Sound: Engine (engine.wasm)
-// Motivation: エンジンの回転数が動きの激しさに応じて変化するように、横向きに持ったデバイスを激しく振るとエンジン音が大きくなる
+// Motivation: rotationX:0の時に音は鳴らず、-50°や50°に近づくにつれて音量が大きくなる
 function rotationChange(rotx, roty, rotz) {
-    // Check if device is held horizontally (landscape orientation)
-    // rotationY (Pitch) should be around 0° or 180° for horizontal
-    // Allow some tolerance: -30° to 30° or 150° to 210° (wrapped)
-    const isHorizontal = (roty !== null && (
-        (roty >= -30 && roty <= 30) || 
-        (roty >= 150 && roty <= 180) || 
-        (roty >= -180 && roty <= -150)
-    ));
-    
-    // Store horizontal state for use in deviceShaken()
-    window.isDeviceHorizontal = isHorizontal;
+    // Check if rotationX is in the valid range (-50° to 50°)
+    if (rotx !== null && rotx >= -50 && rotx <= 50) {
+        // Calculate volume based on distance from 0°
+        // When rotx = 0°, volume = 0.0
+        // When rotx = ±50°, volume = 1.0
+        // Use absolute value to get distance from center
+        const absRotX = Math.abs(rotx);
+        // Normalize from 0° to 50° to 0.0 to 1.0
+        const normalizedVolume = absRotX / 50.0;
+        
+        // Play audio with volume based on rotationX
+        playAudio(normalizedVolume);
+    } else {
+        // Outside the range, stop the sound
+        playAudio(0.0);
+    }
 }
 
 function mousePressed() {
@@ -120,22 +107,10 @@ function deviceMoved() {
 function deviceTurned() {
     threshVals[1] = turnAxis;
 }
-// Mapping 1: Shake (horizontal) → Engine
-// Gesture: iPhoneを横向きに持って振る
-// Sound: Engine (engine.wasm)
-// Motivation: エンジンの回転数が動きの激しさに応じて変化するように、横向きに持ったデバイスを激しく振るとエンジン音が大きくなる
 function deviceShaken() {
-    // Only trigger if device is held horizontally
-    if (window.isDeviceHorizontal) {
-        shaketimer = millis();
-        statusLabels[0].style("color", "pink");
-        
-        // Get shake intensity (calculated in accelerationChange)
-        const shakeIntensity = window.lastShakeIntensity || 0;
-        
-        // Play audio with intensity-based volume
-        playAudio(shakeIntensity);
-    }
+    shaketimer = millis();
+    statusLabels[0].style("color", "pink");
+    // Not used for this interaction - volume is controlled by rotationX in rotationChange()
 }
 
 function getMinMaxParam(address) {
@@ -156,10 +131,10 @@ function getMinMaxParam(address) {
 //
 //==========================================================================================
 
-// Play engine sound when device is shaken horizontally
-// Uses /engine/gate parameter and /engine/volume or /engine/maxSpeed based on shake intensity
-// Shake intensity affects the volume or maxSpeed parameter
-function playAudio(shakeIntensity = 0) {
+// Play engine sound with volume controlled by rotationX
+// Uses /engine/gate parameter and /engine/volume based on rotationX angle
+// Volume: 0.0 (rotationX = 0°) to 1.0 (rotationX = ±50°)
+function playAudio(volume = 0.0) {
     if (!dspNode) {
         return;
     }
@@ -167,26 +142,27 @@ function playAudio(shakeIntensity = 0) {
         return;
     }
     
-    // Normalize shake intensity to 0.0-1.0 range
-    // Typical shake intensity ranges from 0 to ~50, adjust threshold as needed
-    const normalizedIntensity = Math.min(1.0, Math.max(0.0, shakeIntensity / 30.0));
+    // Clamp volume to valid range (0.0 to 1.0)
+    const clampedVolume = Math.max(0.0, Math.min(1.0, volume));
     
-    // Trigger engine sound with gate
+    // If volume is 0, turn off the gate
+    if (clampedVolume === 0.0) {
+        dspNode.setParamValue("/engine/gate", 0);
+        return;
+    }
+    
+    // Set gate to 1 to start the engine
     dspNode.setParamValue("/engine/gate", 1);
     
-    // Set volume or maxSpeed based on shake intensity
-    // Adjust volume: 0.3 (min) to 1.0 (max) based on intensity
-    const volume = 0.3 + (normalizedIntensity * 0.7);
-    dspNode.setParamValue("/engine/volume", volume);
+    // Set volume based on rotationX (0.0 to 1.0)
+    // Minimum volume threshold to ensure engine is audible
+    const minVolume = 0.1;
+    const engineVolume = minVolume + (clampedVolume * 0.9); // 0.1 to 1.0
+    dspNode.setParamValue("/engine/volume", engineVolume);
     
-    // Optionally adjust maxSpeed as well
-    const maxSpeed = 0.1 + (normalizedIntensity * 0.9);
+    // Optionally adjust maxSpeed based on volume as well
+    const maxSpeed = 0.1 + (clampedVolume * 0.9);
     dspNode.setParamValue("/engine/maxSpeed", maxSpeed);
-    
-    // Keep gate on for a short duration
-    setTimeout(() => { 
-        dspNode.setParamValue("/engine/gate", 0);
-    }, 100);
 }
 
 //==========================================================================================

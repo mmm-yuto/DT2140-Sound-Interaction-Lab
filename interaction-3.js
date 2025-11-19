@@ -70,31 +70,19 @@ marimbaMIDI.createDSP(audioContext, 1024)
 //==========================================================================================
 
 // Mapping 3: Strike motion → Marimba
-// Gesture: スティックをたたくような動き
+// Gesture: accelerationXの絶対値が2を超えた時に音がなる
 // Sound: Marimba (marimbaMIDI.wasm)
 // Motivation: マリンバをスティックでたたく動作を、デバイスを急激に動かす（たたくような）動作で表現
 
-// Store previous acceleration values to detect sudden changes (strike motion)
-let prevAccX = 0, prevAccY = 0, prevAccZ = 0;
 let lastStrikeTime = 0;
 const STRIKE_COOLDOWN = 200; // milliseconds to prevent continuous triggering
-const STRIKE_THRESHOLD = 15.0; // threshold for detecting strike motion
+const ACCELERATION_X_THRESHOLD = 2.0; // threshold for accelerationX absolute value
 
 function accelerationChange(accx, accy, accz) {
-    // Calculate acceleration change (strike intensity)
-    const accChange = Math.sqrt(
-        Math.pow(accx - prevAccX, 2) + 
-        Math.pow(accy - prevAccY, 2) + 
-        Math.pow(accz - prevAccZ, 2)
-    );
+    // Check if absolute value of accelerationX exceeds threshold
+    const absAccX = Math.abs(accx);
     
-    // Update previous values
-    prevAccX = accx;
-    prevAccY = accy;
-    prevAccZ = accz;
-    
-    // Detect strike motion: sudden large acceleration change
-    if (accChange > STRIKE_THRESHOLD) {
+    if (absAccX > ACCELERATION_X_THRESHOLD) {
         const currentTime = millis();
         // Prevent continuous triggering with cooldown
         if (currentTime - lastStrikeTime > STRIKE_COOLDOWN) {
