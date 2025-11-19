@@ -91,6 +91,11 @@ function rotationChange(rotx, roty, rotz) {
     // Use absolute value to handle both positive and negative angles
     const absRotX = Math.abs(rotx);
     
+    // Debug: Log rotationX values (only log occasionally to avoid spam)
+    if (Math.random() < 0.01) { // Log 1% of the time
+        console.log('rotationX:', rotx, 'absRotX:', absRotX);
+    }
+    
     // Map rotationX to volume levels (0.0 to 1.0)
     let volume = 0.0;
     
@@ -117,12 +122,20 @@ function rotationChange(rotx, roty, rotz) {
         volume = 0.0;
     }
     
+    // Debug: Log volume level when it changes
+    if (window.lastVolume !== volume) {
+        console.log('Volume level changed:', volume, 'for absRotX:', absRotX);
+        window.lastVolume = volume;
+    }
+    
     // Play audio with the calculated volume level
     playAudio(volume);
 }
 
 function mousePressed() {
-    playAudio()
+    // Test: Play audio at 50% volume for debugging
+    console.log('Mouse pressed - Testing engine sound at 50% volume');
+    playAudio(0.5);
     // Use this for debugging from the desktop!
 }
 
@@ -161,26 +174,47 @@ function getMinMaxParam(address) {
 // Play engine sound with volume controlled by rotationX in 5 discrete levels
 // Uses /engine/gate parameter and /engine/volume based on rotationX angle
 // Volume levels: 0% (0°), 20% (30-60°), 40% (60-90°), 60% (90-120°), 80% (120-150°), 100% (150-180°)
+// Only starts playback if engine is not already playing
 function playAudio(volume = 0.0) {
+    // Debug: Check if dspNode is loaded
     if (!dspNode) {
+        console.warn('playAudio: dspNode is null. Engine WASM may not be loaded yet.');
         return;
     }
+    
+    // Debug: Check audio context state
     if (audioContext.state === 'suspended') {
+        console.warn('playAudio: audioContext is suspended. Click "Turn On DSP" button.');
         return;
+    }
+    
+    // Initialize engine playing state if not set
+    if (window.isEnginePlaying === undefined) {
+        window.isEnginePlaying = false;
     }
     
     // Clamp volume to valid range (0.0 to 1.0)
     const clampedVolume = Math.max(0.0, Math.min(1.0, volume));
     
-    // If volume is 0, turn off the gate
+    // If volume is 0, turn off the gate and stop playback
     if (clampedVolume === 0.0) {
-        dspNode.setParamValue("/engine/gate", 0);
+        if (window.isEnginePlaying) {
+            dspNode.setParamValue("/engine/gate", 0);
+            window.isEnginePlaying = false;
+            // Debug: Log when gate is turned off
+            console.log('Engine gate turned OFF (volume = 0)');
+        }
         return;
     }
     
-    // Set gate to 1 to start the engine
-    dspNode.setParamValue("/engine/gate", 1);
+    // If engine is not playing, start playback
+    if (!window.isEnginePlaying) {
+        dspNode.setParamValue("/engine/gate", 1);
+        window.isEnginePlaying = true;
+        console.log('Engine started playing');
+    }
     
+    // Update volume and speed parameters (always update these, even if already playing)
     // Map volume level (0.0 to 1.0) to engine volume parameter
     // Minimum volume threshold to ensure engine is audible
     const minVolume = 0.1;
@@ -190,6 +224,12 @@ function playAudio(volume = 0.0) {
     // Adjust maxSpeed based on volume level
     const maxSpeed = 0.1 + (clampedVolume * 0.9);
     dspNode.setParamValue("/engine/maxSpeed", maxSpeed);
+    
+    // Debug: Log when volume changes
+    if (window.lastEngineVolume !== engineVolume) {
+        console.log('Engine volume updated - Volume:', clampedVolume, 'Engine Volume:', engineVolume.toFixed(2), 'MaxSpeed:', maxSpeed.toFixed(2));
+        window.lastEngineVolume = engineVolume;
+    }
 }
 
 //==========================================================================================
