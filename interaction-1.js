@@ -85,16 +85,16 @@ function rotationChange(rotx, roty, rotz) {
     // rotationX = 180 → Volume = Max
     const absRotX = Math.abs(rotx);
     const volumeParam = "/untitled/volume";
-    const volumeParamObj = findByAddress(dspNodeParams, volumeParam);
     
-    if (volumeParamObj) {
-        const [minVolume, maxVolume] = getParamMinMax(volumeParamObj);
-        // Clamp rotationX to 0-180 range
-        const clampedRotX = Math.max(0, Math.min(180, absRotX));
-        // Linear mapping: rotationX 0-180 → volume min-max
-        const volumeValue = minVolume + (clampedRotX / 180) * (maxVolume - minVolume);
-        dspNode.setParamValue(volumeParam, volumeValue);
-    }
+    // Volume parameter range: 0.0 to 1.0 (from engine.dsp: volume = hslider("volume", 0.5, 0.0, 1.0, 0.01))
+    const minVolume = 0.0;
+    const maxVolume = 1.0;
+    
+    // Clamp rotationX to 0-180 range
+    const clampedRotX = Math.max(0, Math.min(180, absRotX));
+    // Linear mapping: rotationX 0-180 → volume 0.0-1.0
+    const volumeValue = minVolume + (clampedRotX / 180) * (maxVolume - minVolume);
+    dspNode.setParamValue(volumeParam, volumeValue);
 }
 
 function mousePressed() {
@@ -152,9 +152,7 @@ function playAudio() {
   // Use actual parameter names from engine1.wasm
   const gateParam = "/untitled/gate";
   dspNode.setParamValue(gateParam, 1);
-  setTimeout(() => { 
-    dspNode.setParamValue(gateParam, 0);
-  }, 100);
+ 
 }
 
 //==========================================================================================
