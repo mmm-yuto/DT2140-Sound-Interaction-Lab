@@ -69,21 +69,20 @@ marimbaMIDI.createDSP(audioContext, 1024)
 //
 //==========================================================================================
 
-// Mapping 3: Shake → Marimba
-// Gesture: Shake the phone
-// Sound: Marimba (marimbaMIDI.wasm)
-// Motivation: The shaking motion triggers marimba sounds, creating a percussive and musical interaction
-
 function accelerationChange(accx, accy, accz) {
     // Not used for this interaction
 }
 
+// Mapping 3: Shake → Marimba
+// Gesture: Shake the phone
+// Sound: Marimba (marimbaMIDI.wasm)
+// Motivation: The shaking motion triggers marimba sounds, creating a percussive and musical interaction
 function rotationChange(rotx, roty, rotz) {
     // Not used for this interaction
 }
 
 function mousePressed() {
-    playAudio()
+    // playAudio()
     // Use this for debugging from the desktop!
 }
 

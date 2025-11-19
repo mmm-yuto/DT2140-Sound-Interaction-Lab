@@ -57,8 +57,28 @@ function accelerationChange(accx, accy, accz) {
 //   }
 }
 
+// Mapping 1: Tilt → Engine
+// Gesture: Tilt the device along the X-axis (Roll angle)
+// Sound: Engine (engine.wasm)
+// Motivation: The engine sound is triggered when rotationX exceeds 90°
+let lastTriggerTime = 0;
+const TRIGGER_COOLDOWN = 200; // milliseconds to prevent continuous triggering
+const ROTATION_X_THRESHOLD = 90.0;
+
 function rotationChange(rotx, roty, rotz) {
-    playAudio(rotx);
+    if (rotx === null || !dspNode) {
+        return;
+    }
+    
+    const absRotX = Math.abs(rotx);
+    const currentTime = millis();
+    
+    // Check if rotationX exceeds threshold and cooldown has passed
+    if (absRotX > ROTATION_X_THRESHOLD && 
+        (currentTime - lastTriggerTime > TRIGGER_COOLDOWN)) {
+        playAudio();
+        lastTriggerTime = currentTime;
+    }
 }
 
 function mousePressed() {
@@ -103,32 +123,23 @@ function getMinMaxParam(address) {
 //
 //==========================================================================================
 
-function playAudio(x) {
+// Play engine sound when rotationX exceeds 90°
+// Uses /engine/gate parameter as a gate (0/1)
+// Note: Parameter name may vary, check console for available parameters
+function playAudio() {
   if (!dspNode) {
     return;
   }
   if (audioContext.state === "suspended") {
     return;
   }
-  // Edit here the addresses ("/thunder/rumble") depending on your WASM controls (you can see
-  // them printed on the console of your browser when you load the page)
-  // For example if you change to a bell sound, here you could use "/churchBell/gate" instead of
-  // "/thunder/rumble".
-  console.log(x);
-
-  if (x < 180 && x > 0){
-    dspNode.setParamValue("/engine/gate", 1);
-     var maxSpeed =  map(x, 0, 180, 0.1, 0.9);
-    dspNode.setParamValue("/engine/maxSpeed",maxSpeed);
-  }else{
-    dspNode.setParamValue("/engine/gate", 0);
-  }
-
- 
-
-//   setTimeout(() => {
-//     dspNode.setParamValue("/engine/gate", 0);
-//   }, 10000);
+  // Try common parameter names for engine
+  // The actual parameter name may be different, check console output
+  const gateParam = "/engine/gate";
+  dspNode.setParamValue(gateParam, 1);
+  setTimeout(() => { 
+    dspNode.setParamValue(gateParam, 0);
+  }, 100);
 }
 
 //==========================================================================================
