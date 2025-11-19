@@ -14,31 +14,29 @@ let jsonParams = null;
 // Change here to ("tuono") depending on your wasm file name
 const dspName = "engine";
 const instance = new FaustWasm2ScriptProcessor(dspName);
-const speed =  [1,2,3,4,5]
+
 // output to window or npm package module
 if (typeof module === "undefined") {
-    window[dspName] = instance;
+  window[dspName] = instance;
 } else {
-    const exp = {};
-    exp[dspName] = instance;
-    module.exports = exp;
+  const exp = {};
+  exp[dspName] = instance;
+  module.exports = exp;
 }
 
 // The name should be the same as the WASM file, so change tuono with brass if you use brass.wasm
-engine.createDSP(audioContext, 1024)
-    .then(node => {
-        dspNode = node;
-        dspNode.connect(audioContext.destination);
-        console.log('params: ', dspNode.getParams());
-        const jsonString = dspNode.getJSON();
-        jsonParams = JSON.parse(jsonString)["ui"][0]["items"];
-        dspNodeParams = jsonParams
-        // const exampleMinMaxParam = findByAddress(dspNodeParams, "/thunder/rumble");
-        // // ALWAYS PAY ATTENTION TO MIN AND MAX, ELSE YOU MAY GET REALLY HIGH VOLUMES FROM YOUR SPEAKERS
-        // const [exampleMinValue, exampleMaxValue] = getParamMinMax(exampleMinMaxParam);
-        // console.log('Min value:', exampleMinValue, 'Max value:', exampleMaxValue);
-    });
-
+engine.createDSP(audioContext, 1024).then((node) => {
+  dspNode = node;
+  dspNode.connect(audioContext.destination);
+  console.log("params: ", dspNode.getParams());
+  const jsonString = dspNode.getJSON();
+  jsonParams = JSON.parse(jsonString)["ui"][0]["items"];
+  dspNodeParams = jsonParams;
+  // const exampleMinMaxParam = findByAddress(dspNodeParams, "/thunder/rumble");
+  // // ALWAYS PAY ATTENTION TO MIN AND MAX, ELSE YOU MAY GET REALLY HIGH VOLUMES FROM YOUR SPEAKERS
+  // const [exampleMinValue, exampleMaxValue] = getParamMinMax(exampleMinMaxParam);
+  // console.log('Min value:', exampleMinValue, 'Max value:', exampleMaxValue);
+});
 
 //==========================================================================================
 // INTERACTIONS
@@ -52,75 +50,85 @@ engine.createDSP(audioContext, 1024)
 //==========================================================================================
 
 function accelerationChange(accx, accy, accz) {
-    // Not used for this interaction
+  // changeAccelerationParams()
+//   if (accx>10 && accx < 60) {
+    
+   
+//   }
 }
 
-// Mapping 1: Tilt → Engine
-// Gesture: Tilt the device along the X-axis (Roll angle)
-// Sound: Engine (engine.wasm)
-// Motivation: The device tilt angle (rotationX) controls the engine speed
 function rotationChange(rotx, roty, rotz) {
-    if (rotx === null || !dspNode) {
-        return;
-    }
-    const absRotX = Math.abs(rotx);
-    const clampedRotX = Math.max(0, Math.min(180, absRotX));
-    let gear = Math.floor(clampedRotX / 36);
-    if (gear > 4) gear = 4;
-    dspNode.setParamValue("/engine/maxSpeed", speed[gear]);
-    console.log("x:", clampedRotX, "gear:", gear + 1);
+    playAudio(rotx);
 }
 
 function mousePressed() {
-    // playAudio()
-    // Use this for debugging from the desktop!
+//   playAudio();
+  // Use this for debugging from the desktop!
 }
 
 function deviceMoved() {
-    movetimer = millis();
-    statusLabels[2].style("color", "pink");
+  movetimer = millis();
+  statusLabels[2].style("color", "pink");
 }
 
 function deviceTurned() {
-    threshVals[1] = turnAxis;
+  threshVals[1] = turnAxis;
 }
-
 function deviceShaken() {
-    shaketimer = millis();
-    statusLabels[0].style("color", "pink");
+  shaketimer = millis();
+  statusLabels[0].style("color", "pink");
+//   playAudio();
 }
 
 function getMinMaxParam(address) {
-    const exampleMinMaxParam = findByAddress(dspNodeParams, address);
-    // ALWAYS PAY ATTENTION TO MIN AND MAX, ELSE YOU MAY GET REALLY HIGH VOLUMES FROM YOUR SPEAKERS
-    const [exampleMinValue, exampleMaxValue] = getParamMinMax(exampleMinMaxParam);
-    console.log('Min value:', exampleMinValue, 'Max value:', exampleMaxValue);
-    return [exampleMinValue, exampleMaxValue]
+  const exampleMinMaxParam = findByAddress(dspNodeParams, address);
+  // ALWAYS PAY ATTENTION TO MIN AND MAX, ELSE YOU MAY GET REALLY HIGH VOLUMES FROM YOUR SPEAKERS
+  const [exampleMinValue, exampleMaxValue] = getParamMinMax(exampleMinMaxParam);
+  console.log("Min value:", exampleMinValue, "Max value:", exampleMaxValue);
+  return [exampleMinValue, exampleMaxValue];
 }
+
+// function getRandomBetweenTenAndSixty() {
+//   // Generate a uniform integer in the inclusive range [10, 60]
+//   return Math.floor(Math.random() * 51) + 10;
+// }
 
 //==========================================================================================
 // AUDIO INTERACTION
 //------------------------------------------------------------------------------------------
 //
 //------------------------------------------------------------------------------------------
-// Edit here to define your audio controls 
+// Edit here to define your audio controls
 //------------------------------------------------------------------------------------------
 //
 //==========================================================================================
 
-function playAudio() {
-    if (!dspNode) {
-        return;
-    }
-    if (audioContext.state === 'suspended') {
-        return;
-    }
-    // Edit here the addresses ("/thunder/rumble") depending on your WASM controls (you can see 
-    // them printed on the console of your browser when you load the page)
-    // For example if you change to a bell sound, here you could use "/churchBell/gate" instead of
-    // "/thunder/rumble".
-    dspNode.setParamValue("/engine/maxSpeed", speed[0])
-    
+function playAudio(x) {
+  if (!dspNode) {
+    return;
+  }
+  if (audioContext.state === "suspended") {
+    return;
+  }
+  // Edit here the addresses ("/thunder/rumble") depending on your WASM controls (you can see
+  // them printed on the console of your browser when you load the page)
+  // For example if you change to a bell sound, here you could use "/churchBell/gate" instead of
+  // "/thunder/rumble".
+  console.log(x);
+
+  if (x < 180 && x > 0){
+    dspNode.setParamValue("/engine/gate", 1);
+     var maxSpeed =  map(x, 0, 180, 0.1, 0.9);
+    dspNode.setParamValue("/engine/maxSpeed",maxSpeed);
+  }else{
+    dspNode.setParamValue("/engine/gate", 0);
+  }
+
+ 
+
+//   setTimeout(() => {
+//     dspNode.setParamValue("/engine/gate", 0);
+//   }, 10000);
 }
 
 //==========================================================================================
