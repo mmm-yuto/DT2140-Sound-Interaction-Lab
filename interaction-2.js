@@ -69,9 +69,9 @@ function accelerationChange(accx, accy, accz) {
 }
 
 // Mapping 2: Shake (vertical) → Church Bell
-// Gesture: スマートフォンを縦に持って振る
+// Gesture: The phone is held vertically and shaken
 // Sound: Church Bell (churchBell.wasm)
-// Motivation: 教会の鐘を鳴らす動作（縦方向に振る）を、スマートフォンを縦に持って振る動作で表現
+// Motivation: The vertical shaking motion mimics the physical action of ringing a bell by pulling a rope downward
 function rotationChange(rotx, roty, rotz) {
     // Check if device is held vertically (portrait orientation)
     // rotationY (Pitch) should be around 90° or -90° for vertical
@@ -99,9 +99,9 @@ function deviceTurned() {
     threshVals[1] = turnAxis;
 }
 // Mapping 2: Shake (vertical) → Church Bell
-// Gesture: スマートフォンを縦に持って振る
+// Gesture: The phone is held vertically and shaken
 // Sound: Church Bell (churchBell.wasm)
-// Motivation: 教会の鐘を鳴らす動作（縦方向に振る）を、スマートフォンを縦に持って振る動作で表現
+// Motivation: The vertical shaking motion mimics the physical action of ringing a bell by pulling a rope downward
 function deviceShaken() {
     // Only trigger if device is held vertically
     if (window.isDeviceVertical) {

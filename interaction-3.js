@@ -13,7 +13,7 @@ let jsonParams = null;
 
 // Change here to ("marimbaMIDI") depending on your wasm file name
 // NOTE: You need to compile marimbaMIDI.dsp using Faust IDE to generate marimbaMIDI.wasm
-const dspName = "churchBell";
+const dspName = "marimbaMIDI";
 const instance = new FaustWasm2ScriptProcessor(dspName);
 
 // output to window or npm package module
@@ -69,27 +69,13 @@ marimbaMIDI.createDSP(audioContext, 1024)
 //
 //==========================================================================================
 
-// Mapping 3: Strike motion → Marimba
-// Gesture: accelerationXの絶対値が2を超えた時に音がなる
+// Mapping 3: Shake → Marimba
+// Gesture: Shake the phone
 // Sound: Marimba (marimbaMIDI.wasm)
-// Motivation: マリンバをスティックでたたく動作を、デバイスを急激に動かす（たたくような）動作で表現
-
-let lastStrikeTime = 0;
-const STRIKE_COOLDOWN = 200; // milliseconds to prevent continuous triggering
-const ACCELERATION_X_THRESHOLD = 2.0; // threshold for accelerationX absolute value
+// Motivation: The shaking motion triggers marimba sounds, creating a percussive and musical interaction
 
 function accelerationChange(accx, accy, accz) {
-    // Check if absolute value of accelerationX exceeds threshold
-    const absAccX = Math.abs(accx);
-    
-    if (absAccX > ACCELERATION_X_THRESHOLD) {
-        const currentTime = millis();
-        // Prevent continuous triggering with cooldown
-        if (currentTime - lastStrikeTime > STRIKE_COOLDOWN) {
-            playAudio();
-            lastStrikeTime = currentTime;
-        }
-    }
+    // Not used for this interaction
 }
 
 function rotationChange(rotx, roty, rotz) {
@@ -109,11 +95,14 @@ function deviceMoved() {
 function deviceTurned() {
     threshVals[1] = turnAxis;
 }
+// Mapping 3: Shake → Marimba
+// Gesture: Shake the phone
+// Sound: Marimba (marimbaMIDI.wasm)
+// Motivation: The shaking motion triggers marimba sounds, creating a percussive and musical interaction
 function deviceShaken() {
     shaketimer = millis();
     statusLabels[0].style("color", "pink");
-    // Removed playAudio() call - this interaction uses Strike motion, not Shake
-    // playAudio();
+    playAudio();
 }
 
 function getMinMaxParam(address) {
@@ -134,7 +123,7 @@ function getMinMaxParam(address) {
 //
 //==========================================================================================
 
-// Play marimba sound when strike motion is detected
+// Play marimba sound when device is shaken
 // Uses /marimbaMIDI/gate parameter and optionally /marimbaMIDI/note for different pitches
 // Note: Parameter names may vary, check console for available parameters
 function playAudio() {
