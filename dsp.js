@@ -444,13 +444,31 @@ class FaustWasm2ScriptProcessor {
         };
 
         try {
-            const dspFile = await fetch(this.name + ".wasm");
+            // Try to load from wasm/ folder first, then fallback to root
+            let wasmPath = "wasm/" + this.name + ".wasm";
+            let dspFile;
+            
+            try {
+                dspFile = await fetch(wasmPath);
+                if (!dspFile.ok) {
+                    throw new Error("Not found in wasm/ folder");
+                }
+            } catch (e) {
+                // If not found in wasm/ folder, try root directory
+                wasmPath = this.name + ".wasm";
+                dspFile = await fetch(wasmPath);
+                if (!dspFile.ok) {
+                    throw new Error("WASM file not found in both wasm/ folder and root: " + this.name + ".wasm");
+                }
+            }
+            
             const dspBuffer = await dspFile.arrayBuffer();
             const dspModule = await WebAssembly.instantiate(dspBuffer, importObject);
             return this.getNode(dspModule.instance, audioCtx, bufferSize);
         } catch (e) {
             this.error(e);
             this.error("Faust " + this.name + " cannot be loaded or compiled");
+            throw e; // Re-throw to allow caller to handle
         }
     }
 
