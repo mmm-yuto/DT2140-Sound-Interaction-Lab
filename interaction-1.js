@@ -11,8 +11,9 @@ let dspNode = null;
 let dspNodeParams = null;
 let jsonParams = null;
 
-// Change here to ("tuono") depending on your wasm file name
-const dspName = "tuono";
+// Change here to ("engine") depending on your wasm file name
+// NOTE: You need to compile engine.dsp using Faust IDE to generate engine.wasm
+const dspName = "engine";
 const instance = new FaustWasm2ScriptProcessor(dspName);
 
 // output to window or npm package module
@@ -24,8 +25,8 @@ if (typeof module === "undefined") {
     module.exports = exp;
 }
 
-// The name should be the same as the WASM file, so change tuono with brass if you use brass.wasm
-tuono.createDSP(audioContext, 1024)
+// The name should be the same as the WASM file, so change engine with your wasm file name
+engine.createDSP(audioContext, 1024)
     .then(node => {
         dspNode = node;
         dspNode.connect(audioContext.destination);
@@ -33,11 +34,17 @@ tuono.createDSP(audioContext, 1024)
         const jsonString = dspNode.getJSON();
         jsonParams = JSON.parse(jsonString)["ui"][0]["items"];
         dspNodeParams = jsonParams
-        // Check thunder/rumble parameter min/max values for safety
-        const thunderParam = findByAddress(dspNodeParams, "/thunder/rumble");
-        if (thunderParam) {
-            const [minValue, maxValue] = getParamMinMax(thunderParam);
-            console.log('Thunder/rumble - Min value:', minValue, 'Max value:', maxValue);
+        // Check engine parameters min/max values for safety
+        // Engine parameters: gate, volume, maxSpeed, etc.
+        const engineGateParam = findByAddress(dspNodeParams, "/engine/gate");
+        const engineVolumeParam = findByAddress(dspNodeParams, "/engine/volume");
+        if (engineGateParam) {
+            const [minValue, maxValue] = getParamMinMax(engineGateParam);
+            console.log('Engine/gate - Min value:', minValue, 'Max value:', maxValue);
+        }
+        if (engineVolumeParam) {
+            const [minValue, maxValue] = getParamMinMax(engineVolumeParam);
+            console.log('Engine/volume - Min value:', minValue, 'Max value:', maxValue);
         }
     });
 
@@ -53,11 +60,44 @@ tuono.createDSP(audioContext, 1024)
 //
 //==========================================================================================
 
+// Store previous acceleration values to calculate change
+let prevAccX = 0, prevAccY = 0, prevAccZ = 0;
+let lastShakeTime = 0;
+const SHAKE_COOLDOWN = 100; // milliseconds
+
 function accelerationChange(accx, accy, accz) {
-    // playAudio()
+    // Calculate acceleration change (shake intensity)
+    const accChange = Math.sqrt(
+        Math.pow(accx - prevAccX, 2) + 
+        Math.pow(accy - prevAccY, 2) + 
+        Math.pow(accz - prevAccZ, 2)
+    );
+    
+    // Update previous values
+    prevAccX = accx;
+    prevAccY = accy;
+    prevAccZ = accz;
+    
+    // Store shake intensity for use in deviceShaken()
+    window.lastShakeIntensity = accChange;
 }
 
+// Mapping 1: Shake (horizontal) → Engine
+// Gesture: iPhoneを横向きに持って振る
+// Sound: Engine (engine.wasm)
+// Motivation: エンジンの回転数が動きの激しさに応じて変化するように、横向きに持ったデバイスを激しく振るとエンジン音が大きくなる
 function rotationChange(rotx, roty, rotz) {
+    // Check if device is held horizontally (landscape orientation)
+    // rotationY (Pitch) should be around 0° or 180° for horizontal
+    // Allow some tolerance: -30° to 30° or 150° to 210° (wrapped)
+    const isHorizontal = (roty !== null && (
+        (roty >= -30 && roty <= 30) || 
+        (roty >= 150 && roty <= 180) || 
+        (roty >= -180 && roty <= -150)
+    ));
+    
+    // Store horizontal state for use in deviceShaken()
+    window.isDeviceHorizontal = isHorizontal;
 }
 
 function mousePressed() {
@@ -73,14 +113,22 @@ function deviceMoved() {
 function deviceTurned() {
     threshVals[1] = turnAxis;
 }
-// Mapping 1: Shake → Thunder
-// Gesture: The phone is shaken
-// Sound: Thunder (tuono.wasm)
-// Motivation: The impactful sound of thunder is expressed through the action of shaking the phone
+// Mapping 1: Shake (horizontal) → Engine
+// Gesture: iPhoneを横向きに持って振る
+// Sound: Engine (engine.wasm)
+// Motivation: エンジンの回転数が動きの激しさに応じて変化するように、横向きに持ったデバイスを激しく振るとエンジン音が大きくなる
 function deviceShaken() {
-    shaketimer = millis();
-    statusLabels[0].style("color", "pink");
-    playAudio();
+    // Only trigger if device is held horizontally
+    if (window.isDeviceHorizontal) {
+        shaketimer = millis();
+        statusLabels[0].style("color", "pink");
+        
+        // Get shake intensity (calculated in accelerationChange)
+        const shakeIntensity = window.lastShakeIntensity || 0;
+        
+        // Play audio with intensity-based volume
+        playAudio(shakeIntensity);
+    }
 }
 
 function getMinMaxParam(address) {
@@ -101,18 +149,37 @@ function getMinMaxParam(address) {
 //
 //==========================================================================================
 
-// Play thunder sound when device is shaken
-// Uses /thunder/rumble parameter as a gate (0/1)
-function playAudio() {
+// Play engine sound when device is shaken horizontally
+// Uses /engine/gate parameter and /engine/volume or /engine/maxSpeed based on shake intensity
+// Shake intensity affects the volume or maxSpeed parameter
+function playAudio(shakeIntensity = 0) {
     if (!dspNode) {
         return;
     }
     if (audioContext.state === 'suspended') {
         return;
     }
-    // Trigger thunder sound with gate parameter
-    dspNode.setParamValue("/thunder/rumble", 1)
-    setTimeout(() => { dspNode.setParamValue("/thunder/rumble", 0) }, 100);
+    
+    // Normalize shake intensity to 0.0-1.0 range
+    // Typical shake intensity ranges from 0 to ~50, adjust threshold as needed
+    const normalizedIntensity = Math.min(1.0, Math.max(0.0, shakeIntensity / 30.0));
+    
+    // Trigger engine sound with gate
+    dspNode.setParamValue("/engine/gate", 1);
+    
+    // Set volume or maxSpeed based on shake intensity
+    // Adjust volume: 0.3 (min) to 1.0 (max) based on intensity
+    const volume = 0.3 + (normalizedIntensity * 0.7);
+    dspNode.setParamValue("/engine/volume", volume);
+    
+    // Optionally adjust maxSpeed as well
+    const maxSpeed = 0.1 + (normalizedIntensity * 0.9);
+    dspNode.setParamValue("/engine/maxSpeed", maxSpeed);
+    
+    // Keep gate on for a short duration
+    setTimeout(() => { 
+        dspNode.setParamValue("/engine/gate", 0);
+    }, 100);
 }
 
 //==========================================================================================

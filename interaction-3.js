@@ -11,8 +11,9 @@ let dspNode = null;
 let dspNodeParams = null;
 let jsonParams = null;
 
-// Change here to ("tuono") depending on your wasm file name
-const dspName = "brass";
+// Change here to ("marimbaMIDI") depending on your wasm file name
+// NOTE: You need to compile marimbaMIDI.dsp using Faust IDE to generate marimbaMIDI.wasm
+const dspName = "marimbaMIDI";
 const instance = new FaustWasm2ScriptProcessor(dspName);
 
 // output to window or npm package module
@@ -24,8 +25,8 @@ if (typeof module === "undefined") {
     module.exports = exp;
 }
 
-// The name should be the same as the WASM file, so change tuono with brass if you use brass.wasm
-brass.createDSP(audioContext, 1024)
+// The name should be the same as the WASM file, so change marimbaMIDI with your wasm file name
+marimbaMIDI.createDSP(audioContext, 1024)
     .then(node => {
         dspNode = node;
         dspNode.connect(audioContext.destination);
@@ -33,12 +34,20 @@ brass.createDSP(audioContext, 1024)
         const jsonString = dspNode.getJSON();
         jsonParams = JSON.parse(jsonString)["ui"][0]["items"];
         dspNodeParams = jsonParams
-        // Check brass/blower/pressure parameter min/max values for safety
-        const brassParam = findByAddress(dspNodeParams, "/brass/blower/pressure");
-        if (brassParam) {
-            const [minValue, maxValue] = getParamMinMax(brassParam);
-            console.log('Brass/blower/pressure - Min value:', minValue, 'Max value:', maxValue);
+        // Check marimbaMIDI parameters min/max values for safety
+        // MarimbaMIDI parameters: gate, note, velocity, etc.
+        const marimbaGateParam = findByAddress(dspNodeParams, "/marimbaMIDI/gate");
+        const marimbaNoteParam = findByAddress(dspNodeParams, "/marimbaMIDI/note");
+        if (marimbaGateParam) {
+            const [minValue, maxValue] = getParamMinMax(marimbaGateParam);
+            console.log('MarimbaMIDI/gate - Min value:', minValue, 'Max value:', maxValue);
         }
+        if (marimbaNoteParam) {
+            const [minValue, maxValue] = getParamMinMax(marimbaNoteParam);
+            console.log('MarimbaMIDI/note - Min value:', minValue, 'Max value:', maxValue);
+        }
+        // If parameters don't exist, check for other common parameters
+        console.log('Available parameters:', dspNode.getParams());
     });
 
 
@@ -53,32 +62,47 @@ brass.createDSP(audioContext, 1024)
 //
 //==========================================================================================
 
-function accelerationChange(accx, accy, accz) {
-    // Not used for this interaction
-}
+// Mapping 3: Strike motion → Marimba
+// Gesture: スティックをたたくような動き
+// Sound: Marimba (marimbaMIDI.wasm)
+// Motivation: マリンバをスティックでたたく動作を、デバイスを急激に動かす（たたくような）動作で表現
 
-// Mapping 3: Tilt side to side → Brass
-// Gesture: The phone is placed flat and tilted from side to side
-// Sound: Brass (brass.wasm)
-// Motivation: The breath strength of a brass instrument is controlled by the tilt of the device
-function rotationChange(rotx, roty, rotz) {
-    // rotationX (Roll/Gamma) represents the side-to-side tilt
-    // -90° to +90° range represents the tilt angle
-    // Normalize to 0.0 to 1.0 range for pressure parameter
-    if (rotx !== null) {
-        // Clamp rotationX to -90° to +90° range
-        const clampedAngle = Math.max(-90, Math.min(90, rotx));
-        // Normalize from -90° to +90° to 0.0 to 1.0
-        // When rotx = -90°, pressure = 0.0
-        // When rotx = 0°, pressure = 0.5
-        // When rotx = +90°, pressure = 1.0
-        const normalizedPressure = (clampedAngle + 90) / 180;
-        playAudio(normalizedPressure);
+// Store previous acceleration values to detect sudden changes (strike motion)
+let prevAccX = 0, prevAccY = 0, prevAccZ = 0;
+let lastStrikeTime = 0;
+const STRIKE_COOLDOWN = 200; // milliseconds to prevent continuous triggering
+const STRIKE_THRESHOLD = 15.0; // threshold for detecting strike motion
+
+function accelerationChange(accx, accy, accz) {
+    // Calculate acceleration change (strike intensity)
+    const accChange = Math.sqrt(
+        Math.pow(accx - prevAccX, 2) + 
+        Math.pow(accy - prevAccY, 2) + 
+        Math.pow(accz - prevAccZ, 2)
+    );
+    
+    // Update previous values
+    prevAccX = accx;
+    prevAccY = accy;
+    prevAccZ = accz;
+    
+    // Detect strike motion: sudden large acceleration change
+    if (accChange > STRIKE_THRESHOLD) {
+        const currentTime = millis();
+        // Prevent continuous triggering with cooldown
+        if (currentTime - lastStrikeTime > STRIKE_COOLDOWN) {
+            playAudio();
+            lastStrikeTime = currentTime;
+        }
     }
 }
 
+function rotationChange(rotx, roty, rotz) {
+    // Not used for this interaction
+}
+
 function mousePressed() {
-    playAudio(mouseX/windowWidth)
+    playAudio()
     // Use this for debugging from the desktop!
 }
 
@@ -93,7 +117,7 @@ function deviceTurned() {
 function deviceShaken() {
     shaketimer = millis();
     statusLabels[0].style("color", "pink");
-    // Removed playAudio() call - this interaction uses Tilt side to side, not Shake
+    // Removed playAudio() call - this interaction uses Strike motion, not Shake
     // playAudio();
 }
 
@@ -115,19 +139,33 @@ function getMinMaxParam(address) {
 //
 //==========================================================================================
 
-// Play brass sound with pressure controlled by device tilt
-// Uses /brass/blower/pressure parameter (continuous value 0.0 to 1.0)
-// Pressure is mapped from device tilt angle (rotationX)
-function playAudio(pressure) {
+// Play marimba sound when strike motion is detected
+// Uses /marimbaMIDI/gate parameter and optionally /marimbaMIDI/note for different pitches
+// Note: Parameter names may vary, check console for available parameters
+function playAudio() {
     if (!dspNode) {
         return;
     }
     if (audioContext.state === 'suspended') {
         return;
     }
-    // Clamp pressure to valid range (0.0 to 1.0) for safety
-    const clampedPressure = Math.max(0.0, Math.min(1.0, pressure));
-    dspNode.setParamValue("/brass/blower/pressure", clampedPressure);
+    // Try common parameter names for marimba MIDI
+    // The actual parameter names may be different, check console output
+    const gateParam = "/marimbaMIDI/gate";
+    const noteParam = "/marimbaMIDI/note";
+    
+    // Trigger marimba sound with gate
+    dspNode.setParamValue(gateParam, 1);
+    
+    // Optionally set a note (MIDI note number, e.g., 60 = C4)
+    // You can randomize or vary the note for different pitches
+    const midiNote = 60 + Math.floor(Math.random() * 12); // C4 to C5 range
+    dspNode.setParamValue(noteParam, midiNote);
+    
+    // Keep gate on for a short duration
+    setTimeout(() => { 
+        dspNode.setParamValue(gateParam, 0);
+    }, 100);
 }
 
 //==========================================================================================
