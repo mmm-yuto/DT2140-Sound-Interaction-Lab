@@ -51,12 +51,12 @@ engine.createDSP(audioContext, 1024)
 //
 //==========================================================================================
 
-// function accelerationChange(accx, accy, accz) {
-//     // playAudio()
-// }
+function accelerationChange(accx, accy, accz) {
+    // playAudio()
+}
 
-// function rotationChange(rotx, roty, rotz) {
-// }
+function rotationChange(rotx, roty, rotz) {
+}
 
 // function mousePressed() {
 //     playAudio()
@@ -70,20 +70,20 @@ function updateEngine(xAngle) {
     xAngle = Math.max(0, Math.min(180, xAngle));
     let gear = Math.floor(xAngle / 36);
     if (gear > 4) gear = 4;
-    dspNode.setParamValue("/engine/maxSpeed", speeds[gear]);
+    dspNode.setParamValue("/engine/maxSpeed", speed[gear]);
     console.log("x:", xAngle, "gear:", gear + 1);
 }
 
 
 
 function deviceMoved() {
-    updateEngine(rotationX)
-    updateAudio()
+    playAudio();
+    updateEngine(rotationX);
 }
 
-// function deviceTurned() {
-//     threshVals[1] = turnAxis;
-// }
+function deviceTurned() {
+    threshVals[1] = turnAxis;
+}
 // function deviceShaken() {
 //     shaketimer = millis();
 //     statusLabels[0].style("color", "pink");
