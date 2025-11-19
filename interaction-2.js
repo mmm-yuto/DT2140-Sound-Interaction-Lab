@@ -33,10 +33,12 @@ bells.createDSP(audioContext, 1024)
         const jsonString = dspNode.getJSON();
         jsonParams = JSON.parse(jsonString)["ui"][0]["items"];
         dspNodeParams = jsonParams
-        // const exampleMinMaxParam = findByAddress(dspNodeParams, "/thunder/rumble");
-        // // ALWAYS PAY ATTENTION TO MIN AND MAX, ELSE YOU MAY GET REALLY HIGH VOLUMES FROM YOUR SPEAKERS
-        // const [exampleMinValue, exampleMaxValue] = getParamMinMax(exampleMinMaxParam);
-        // console.log('Min value:', exampleMinValue, 'Max value:', exampleMaxValue);
+        // Check englishBell/gate parameter min/max values for safety
+        const bellParam = findByAddress(dspNodeParams, "/englishBell/gate");
+        if (bellParam) {
+            const [minValue, maxValue] = getParamMinMax(bellParam);
+            console.log('EnglishBell/gate - Min value:', minValue, 'Max value:', maxValue);
+        }
     });
 
 
@@ -52,10 +54,28 @@ bells.createDSP(audioContext, 1024)
 //==========================================================================================
 
 function accelerationChange(accx, accy, accz) {
-    // playAudio()
+    // Not used for this interaction
 }
 
+// Mapping 2: Point straight up → Bells
+// Gesture: The phone is used to point straight up
+// Sound: Bells (bells.wasm)
+// Motivation: The action of ringing a bell (pulling upward) is expressed by pointing the device straight up
+let lastBellTriggerTime = 0;
+const BELL_COOLDOWN = 500; // milliseconds to prevent continuous triggering
+
 function rotationChange(rotx, roty, rotz) {
+    // rotationY (Pitch/Beta) represents the vertical tilt
+    // 90° means pointing straight up
+    // Check if device is pointing straight up (85° to 95° range)
+    if (roty !== null && roty >= 85 && roty <= 95) {
+        const currentTime = millis();
+        // Prevent continuous triggering with cooldown
+        if (currentTime - lastBellTriggerTime > BELL_COOLDOWN) {
+            playAudio();
+            lastBellTriggerTime = currentTime;
+        }
+    }
 }
 
 function mousePressed() {
@@ -74,7 +94,8 @@ function deviceTurned() {
 function deviceShaken() {
     shaketimer = millis();
     statusLabels[0].style("color", "pink");
-    playAudio();
+    // Removed playAudio() call - this interaction uses Point straight up, not Shake
+    // playAudio();
 }
 
 function getMinMaxParam(address) {
@@ -95,6 +116,8 @@ function getMinMaxParam(address) {
 //
 //==========================================================================================
 
+// Play bell sound when device is pointed straight up
+// Uses /englishBell/gate parameter as a gate (0/1)
 function playAudio() {
     if (!dspNode) {
         return;
@@ -102,6 +125,7 @@ function playAudio() {
     if (audioContext.state === 'suspended') {
         return;
     }
+    // Trigger bell sound with gate parameter
     dspNode.setParamValue("/englishBell/gate", 1)
     setTimeout(() => { dspNode.setParamValue("/englishBell/gate", 0) }, 100);
 }

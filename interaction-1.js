@@ -33,10 +33,12 @@ tuono.createDSP(audioContext, 1024)
         const jsonString = dspNode.getJSON();
         jsonParams = JSON.parse(jsonString)["ui"][0]["items"];
         dspNodeParams = jsonParams
-        // const exampleMinMaxParam = findByAddress(dspNodeParams, "/thunder/rumble");
-        // // ALWAYS PAY ATTENTION TO MIN AND MAX, ELSE YOU MAY GET REALLY HIGH VOLUMES FROM YOUR SPEAKERS
-        // const [exampleMinValue, exampleMaxValue] = getParamMinMax(exampleMinMaxParam);
-        // console.log('Min value:', exampleMinValue, 'Max value:', exampleMaxValue);
+        // Check thunder/rumble parameter min/max values for safety
+        const thunderParam = findByAddress(dspNodeParams, "/thunder/rumble");
+        if (thunderParam) {
+            const [minValue, maxValue] = getParamMinMax(thunderParam);
+            console.log('Thunder/rumble - Min value:', minValue, 'Max value:', maxValue);
+        }
     });
 
 
@@ -71,6 +73,10 @@ function deviceMoved() {
 function deviceTurned() {
     threshVals[1] = turnAxis;
 }
+// Mapping 1: Shake → Thunder
+// Gesture: The phone is shaken
+// Sound: Thunder (tuono.wasm)
+// Motivation: The impactful sound of thunder is expressed through the action of shaking the phone
 function deviceShaken() {
     shaketimer = millis();
     statusLabels[0].style("color", "pink");
@@ -95,6 +101,8 @@ function getMinMaxParam(address) {
 //
 //==========================================================================================
 
+// Play thunder sound when device is shaken
+// Uses /thunder/rumble parameter as a gate (0/1)
 function playAudio() {
     if (!dspNode) {
         return;
@@ -102,10 +110,7 @@ function playAudio() {
     if (audioContext.state === 'suspended') {
         return;
     }
-    // Edit here the addresses ("/thunder/rumble") depending on your WASM controls (you can see 
-    // them printed on the console of your browser when you load the page)
-    // For example if you change to a bell sound, here you could use "/churchBell/gate" instead of
-    // "/thunder/rumble".
+    // Trigger thunder sound with gate parameter
     dspNode.setParamValue("/thunder/rumble", 1)
     setTimeout(() => { dspNode.setParamValue("/thunder/rumble", 0) }, 100);
 }

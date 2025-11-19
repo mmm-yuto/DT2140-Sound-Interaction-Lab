@@ -33,10 +33,12 @@ brass.createDSP(audioContext, 1024)
         const jsonString = dspNode.getJSON();
         jsonParams = JSON.parse(jsonString)["ui"][0]["items"];
         dspNodeParams = jsonParams
-        // const exampleMinMaxParam = findByAddress(dspNodeParams, "/thunder/rumble");
-        // // ALWAYS PAY ATTENTION TO MIN AND MAX, ELSE YOU MAY GET REALLY HIGH VOLUMES FROM YOUR SPEAKERS
-        // const [exampleMinValue, exampleMaxValue] = getParamMinMax(exampleMinMaxParam);
-        // console.log('Min value:', exampleMinValue, 'Max value:', exampleMaxValue);
+        // Check brass/blower/pressure parameter min/max values for safety
+        const brassParam = findByAddress(dspNodeParams, "/brass/blower/pressure");
+        if (brassParam) {
+            const [minValue, maxValue] = getParamMinMax(brassParam);
+            console.log('Brass/blower/pressure - Min value:', minValue, 'Max value:', maxValue);
+        }
     });
 
 
@@ -52,10 +54,27 @@ brass.createDSP(audioContext, 1024)
 //==========================================================================================
 
 function accelerationChange(accx, accy, accz) {
-    // playAudio()
+    // Not used for this interaction
 }
 
+// Mapping 3: Tilt side to side → Brass
+// Gesture: The phone is placed flat and tilted from side to side
+// Sound: Brass (brass.wasm)
+// Motivation: The breath strength of a brass instrument is controlled by the tilt of the device
 function rotationChange(rotx, roty, rotz) {
+    // rotationX (Roll/Gamma) represents the side-to-side tilt
+    // -90° to +90° range represents the tilt angle
+    // Normalize to 0.0 to 1.0 range for pressure parameter
+    if (rotx !== null) {
+        // Clamp rotationX to -90° to +90° range
+        const clampedAngle = Math.max(-90, Math.min(90, rotx));
+        // Normalize from -90° to +90° to 0.0 to 1.0
+        // When rotx = -90°, pressure = 0.0
+        // When rotx = 0°, pressure = 0.5
+        // When rotx = +90°, pressure = 1.0
+        const normalizedPressure = (clampedAngle + 90) / 180;
+        playAudio(normalizedPressure);
+    }
 }
 
 function mousePressed() {
@@ -74,7 +93,8 @@ function deviceTurned() {
 function deviceShaken() {
     shaketimer = millis();
     statusLabels[0].style("color", "pink");
-    playAudio();
+    // Removed playAudio() call - this interaction uses Tilt side to side, not Shake
+    // playAudio();
 }
 
 function getMinMaxParam(address) {
@@ -95,6 +115,9 @@ function getMinMaxParam(address) {
 //
 //==========================================================================================
 
+// Play brass sound with pressure controlled by device tilt
+// Uses /brass/blower/pressure parameter (continuous value 0.0 to 1.0)
+// Pressure is mapped from device tilt angle (rotationX)
 function playAudio(pressure) {
     if (!dspNode) {
         return;
@@ -102,8 +125,9 @@ function playAudio(pressure) {
     if (audioContext.state === 'suspended') {
         return;
     }
-    console.log(pressure)
-    dspNode.setParamValue("/brass/blower/pressure", pressure)
+    // Clamp pressure to valid range (0.0 to 1.0) for safety
+    const clampedPressure = Math.max(0.0, Math.min(1.0, pressure));
+    dspNode.setParamValue("/brass/blower/pressure", clampedPressure);
 }
 
 //==========================================================================================
