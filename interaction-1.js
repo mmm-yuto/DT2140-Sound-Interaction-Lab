@@ -14,7 +14,7 @@ let jsonParams = null;
 // Change here to ("tuono") depending on your wasm file name
 const dspName = "engine";
 const instance = new FaustWasm2ScriptProcessor(dspName);
-
+const speed =  [1,2,3,4,5]
 // output to window or npm package module
 if (typeof module === "undefined") {
     window[dspName] = instance;
@@ -63,10 +63,23 @@ engine.createDSP(audioContext, 1024)
 //     // Use this for debugging from the desktop!
 // }
 
-// function deviceMoved() {
-//     movetimer = millis();
-//     statusLabels[2].style("color", "pink");
-// }
+// 根据 xAngle（0-180）设置引擎速度
+function updateEngine(xAngle) {
+    if (!dspNode) return;
+
+    xAngle = Math.max(0, Math.min(180, xAngle));
+    let gear = Math.floor(xAngle / 36);
+    if (gear > 4) gear = 4;
+    dspNode.setParamValue("/engine/maxSpeed", speeds[gear]);
+    console.log("x:", xAngle, "gear:", gear + 1);
+}
+
+
+
+function deviceMoved() {
+    updateEngine(rotationX)
+    updateAudio()
+}
 
 // function deviceTurned() {
 //     threshVals[1] = turnAxis;
@@ -106,8 +119,8 @@ function playAudio() {
     // them printed on the console of your browser when you load the page)
     // For example if you change to a bell sound, here you could use "/churchBell/gate" instead of
     // "/thunder/rumble".
-    dspNode.setParamValue("/engine/maxSpeed", 1)
-    setTimeout(() => { dspNode.setParamValue("/engine/maxSpeed", 0) }, 100);
+    dspNode.setParamValue("/engine/maxSpeed", speed[0])
+    
 }
 
 //==========================================================================================
