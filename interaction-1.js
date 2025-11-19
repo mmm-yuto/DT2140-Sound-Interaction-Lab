@@ -26,10 +26,12 @@ if (typeof module === "undefined") {
 }
 
 // The name should be the same as the WASM file, so change engine with your wasm file name
+// NOTE: If engine.wasm doesn't exist, this will fail. You need to compile engine.dsp using Faust IDE.
 engine.createDSP(audioContext, 1024)
     .then(node => {
         dspNode = node;
         dspNode.connect(audioContext.destination);
+        console.log('Engine DSP loaded successfully');
         console.log('params: ', dspNode.getParams());
         const jsonString = dspNode.getJSON();
         jsonParams = JSON.parse(jsonString)["ui"][0]["items"];
@@ -46,6 +48,11 @@ engine.createDSP(audioContext, 1024)
             const [minValue, maxValue] = getParamMinMax(engineVolumeParam);
             console.log('Engine/volume - Min value:', minValue, 'Max value:', maxValue);
         }
+    })
+    .catch(error => {
+        console.error('Failed to load engine.wasm:', error);
+        console.error('Please compile engine.dsp using Faust IDE to generate engine.wasm');
+        alert('Error: engine.wasm not found. Please compile engine.dsp using Faust IDE and place engine.wasm in the project root.');
     });
 
 

@@ -33,6 +33,8 @@ let turntimer = 0;
 
 function contextAudioStart() {
   if (!dspNode) {
+    alert('DSP node not loaded. Please check:\n1. WASM file exists in the project root\n2. Check browser console for errors\n3. Make sure to compile .dsp files using Faust IDE');
+    console.error('DSP node is null. Cannot start audio.');
     return;
   }
   if (audioContext.state === 'suspended') {

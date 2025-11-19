@@ -26,10 +26,12 @@ if (typeof module === "undefined") {
 }
 
 // The name should be the same as the WASM file, so change churchBell with your wasm file name
+// NOTE: If churchBell.wasm doesn't exist, this will fail. You need to compile churchBell.dsp using Faust IDE.
 churchBell.createDSP(audioContext, 1024)
     .then(node => {
         dspNode = node;
         dspNode.connect(audioContext.destination);
+        console.log('ChurchBell DSP loaded successfully');
         console.log('params: ', dspNode.getParams());
         const jsonString = dspNode.getJSON();
         jsonParams = JSON.parse(jsonString)["ui"][0]["items"];
@@ -43,6 +45,11 @@ churchBell.createDSP(audioContext, 1024)
         }
         // If gate parameter doesn't exist, check for other common parameters
         console.log('Available parameters:', dspNode.getParams());
+    })
+    .catch(error => {
+        console.error('Failed to load churchBell.wasm:', error);
+        console.error('Please compile churchBell.dsp using Faust IDE to generate churchBell.wasm');
+        alert('Error: churchBell.wasm not found. Please compile churchBell.dsp using Faust IDE and place churchBell.wasm in the project root.');
     });
 
 

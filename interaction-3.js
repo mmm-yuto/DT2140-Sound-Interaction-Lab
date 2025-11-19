@@ -26,10 +26,12 @@ if (typeof module === "undefined") {
 }
 
 // The name should be the same as the WASM file, so change marimbaMIDI with your wasm file name
+// NOTE: If marimbaMIDI.wasm doesn't exist, this will fail. You need to compile marimbaMIDI.dsp using Faust IDE.
 marimbaMIDI.createDSP(audioContext, 1024)
     .then(node => {
         dspNode = node;
         dspNode.connect(audioContext.destination);
+        console.log('MarimbaMIDI DSP loaded successfully');
         console.log('params: ', dspNode.getParams());
         const jsonString = dspNode.getJSON();
         jsonParams = JSON.parse(jsonString)["ui"][0]["items"];
@@ -48,6 +50,11 @@ marimbaMIDI.createDSP(audioContext, 1024)
         }
         // If parameters don't exist, check for other common parameters
         console.log('Available parameters:', dspNode.getParams());
+    })
+    .catch(error => {
+        console.error('Failed to load marimbaMIDI.wasm:', error);
+        console.error('Please compile marimbaMIDI.dsp using Faust IDE to generate marimbaMIDI.wasm');
+        alert('Error: marimbaMIDI.wasm not found. Please compile marimbaMIDI.dsp using Faust IDE and place marimbaMIDI.wasm in the project root.');
     });
 
 
